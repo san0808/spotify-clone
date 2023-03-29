@@ -7,12 +7,23 @@ async function refreshAccessToken(token) {
     spotifyApi.setRefreshToken(token.refreshToken)
     spotifyApi.setAccessToken(token.accessToken)
 
+    const refreshedToken = await spotifyApi.refreshAccessToken();
+    console.log("refreshed token", refreshedToken);
+
+    return{
+    ...token,
+    accessToken: refreshedToken.access_Token,
+    accessTokenExpires: Date.now() + refreshedToken.expires_in * 1000,//= one hour as 3600 seconds returns from spotify api
+    refreshToken: refreshedToken.refresh_Token ?? token.refreshToken, //replace if new token is given or fall back to old one
+      
   }
+}
   catch (error) {
     console.error(error);
     return {
       ...token,
       error: "RefreshAccessTokenError",
+      
 
     }
   }
@@ -30,7 +41,7 @@ export const authOptions = {
 
     secret: process.env.JWT_SECRET,
     pages: {
-      signIn: "/login",
+      signIn: "/Login",
     },
     callbacks: {
       async jwt({ token, user, account }) {
@@ -52,7 +63,18 @@ export const authOptions = {
         //access token expires, refresh it
         console.log ("refreshing token has EXPIRED , REFRESHING")
         return await refreshAccessToken(token)
-    }
+        
+
+    },
+
+    async session({ session, token }) {
+      session.user.accessToken = token.accessToken;
+      session.user.refreshToken = token.refreshToken;
+      session.user.username = token.username;
+
+      return session;
+    
+    },
 
 }}
 
